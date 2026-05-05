@@ -139,5 +139,7 @@ from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-}# Modelo de usuario personalizado
+}
+
+# Modelo de usuario personalizado
 AUTH_USER_MODEL = 'users.User'

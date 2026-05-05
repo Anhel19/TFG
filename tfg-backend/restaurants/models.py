@@ -20,12 +20,7 @@ class Restaurant(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
 
-    # Capacidad y horarios
-    capacity = models.PositiveIntegerField(
-        help_text='Número máximo de comensales simultáneos',
-    )
-    opening_time = models.TimeField(help_text='Hora de apertura (ej. 13:00)')
-    closing_time = models.TimeField(help_text='Hora de cierre (ej. 23:30)')
+    # Duración media de reserva (los horarios viven en OpeningHours)
     average_reservation_duration = models.PositiveIntegerField(
         default=90,
         help_text='Duración media de una reserva en minutos',
@@ -42,3 +37,74 @@ class Restaurant(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.city})"
+
+
+class Table(models.Model):
+    """
+    Mesa individual de un restaurante.
+    Cada mesa tiene su propio número y capacidad.
+    """
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.CASCADE,
+        related_name='tables',
+    )
+    number = models.PositiveIntegerField(
+        help_text='Número identificador de la mesa dentro del restaurante',
+    )
+    capacity = models.PositiveIntegerField(
+        help_text='Número de comensales que admite la mesa',
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['restaurant', 'number']
+        verbose_name = 'Mesa'
+        verbose_name_plural = 'Mesas'
+        # No puede haber dos mesas con el mismo número en el mismo restaurante
+        constraints = [
+            models.UniqueConstraint(
+                fields=['restaurant', 'number'],
+                name='unique_table_number_per_restaurant',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Mesa {self.number} ({self.restaurant.name})"
+
+
+class OpeningHours(models.Model):
+    """
+    Horario de apertura de un restaurante para un día concreto de la semana.
+    Si un día no tiene OpeningHours, se considera cerrado.
+    """
+
+    class Weekday(models.IntegerChoices):
+        MONDAY = 0, 'Lunes'
+        TUESDAY = 1, 'Martes'
+        WEDNESDAY = 2, 'Miércoles'
+        THURSDAY = 3, 'Jueves'
+        FRIDAY = 4, 'Viernes'
+        SATURDAY = 5, 'Sábado'
+        SUNDAY = 6, 'Domingo'
+
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.CASCADE,
+        related_name='opening_hours',
+    )
+    day_of_week = models.IntegerField(choices=Weekday.choices)
+    opening_time = models.TimeField()
+    closing_time = models.TimeField()
+
+    class Meta:
+        ordering = ['restaurant', 'day_of_week', 'opening_time']
+        verbose_name = 'Horario de apertura'
+        verbose_name_plural = 'Horarios de apertura'
+
+    def __str__(self):
+        return (
+            f"{self.restaurant.name} - "
+            f"{self.get_day_of_week_display()} "
+            f"{self.opening_time}-{self.closing_time}"
+        )
