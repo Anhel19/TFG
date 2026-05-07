@@ -1,79 +1,96 @@
-from datetime import datetime
-
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Restaurant, Table, OpeningHours
+from users.permissions import IsOwnerRole, IsRestaurantOwner
+
+from .models import OpeningHours, Restaurant, Table
 from .serializers import (
-    RestaurantListSerializer,
-    RestaurantDetailSerializer,
-    TableSerializer,
     OpeningHoursSerializer,
+    RestaurantDetailSerializer,
+    RestaurantListSerializer,
+    RestaurantWriteSerializer,
+    TableSerializer,
 )
-from reservations.availability import get_available_slots
 
 
 class RestaurantViewSet(viewsets.ModelViewSet):
     """
     CRUD de restaurantes.
-    - list / retrieve / availability  -> público
-    - create / update / destroy       -> solo admin/staff
+    - Listar/ver: público
+    - Crear: solo OWNER autenticado
+    - Editar/borrar: solo dueño del restaurante o staff
     """
-    queryset = Restaurant.objects.all()
+    queryset = Restaurant.objects.filter(is_active=True).select_related('owner')
 
     def get_serializer_class(self):
         if self.action == 'list':
             return RestaurantListSerializer
-        return RestaurantDetailSerializer
+        if self.action == 'retrieve':
+            return RestaurantDetailSerializer
+        return RestaurantWriteSerializer
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve', 'availability'):
+        if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
+        if self.action == 'create':
+            return [permissions.IsAuthenticated(), IsOwnerRole()]
+        # update, partial_update, destroy
+        return [permissions.IsAuthenticated(), IsRestaurantOwner()]
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
-    def availability(self, request, pk=None):
-        """
-        GET /api/restaurants/{id}/availability/?date=YYYY-MM-DD&guests=N
-        Devuelve los slots horarios disponibles para esa fecha y nº de comensales.
-        """
-        restaurant = self.get_object()
-        date_str = request.query_params.get('date')
-        guests_str = request.query_params.get('guests')
+    def get_queryset(self):
+        qs = Restaurant.objects.select_related('owner')
+        # En el listado público solo restaurantes activos
+        if self.action == 'list' and not self.request.user.is_staff:
+            qs = qs.filter(is_active=True)
+        # Filtros opcionales por query params
+        city = self.request.query_params.get('city')
+        if city:
+            qs = qs.filter(city__icontains=city)
+        return qs
 
-        if not date_str or not guests_str:
-            return Response(
-                {'detail': 'Parámetros requeridos: date (YYYY-MM-DD) y guests.'},
-                status=400,
-            )
-        try:
-            date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            guests = int(guests_str)
-        except ValueError:
-            return Response({'detail': 'Formato inválido.'}, status=400)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
-        slots = get_available_slots(restaurant, date, guests)
-        return Response({'date': date_str, 'guests': guests, 'slots': slots})
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def mine(self, request):
+        """GET /api/restaurants/mine/ → restaurantes del usuario autenticado."""
+        qs = Restaurant.objects.filter(owner=request.user)
+        serializer = RestaurantListSerializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class TableViewSet(viewsets.ModelViewSet):
-    """CRUD de mesas."""
-    queryset = Table.objects.all()
+    """CRUD de mesas. Solo el dueño del restaurante puede gestionarlas."""
     serializer_class = TableSerializer
+    queryset = Table.objects.select_related('restaurant')
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated(), IsRestaurantOwner()]
+
+    def get_queryset(self):
+        qs = Table.objects.select_related('restaurant')
+        restaurant_id = self.request.query_params.get('restaurant')
+        if restaurant_id:
+            qs = qs.filter(restaurant_id=restaurant_id)
+        return qs
 
 
 class OpeningHoursViewSet(viewsets.ModelViewSet):
-    """CRUD de horarios."""
-    queryset = OpeningHours.objects.all()
+    """CRUD de horarios de apertura. Solo el dueño puede gestionarlos."""
     serializer_class = OpeningHoursSerializer
+    queryset = OpeningHours.objects.select_related('restaurant')
 
     def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
+        if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated(), IsRestaurantOwner()]
+
+    def get_queryset(self):
+        qs = OpeningHours.objects.select_related('restaurant')
+        restaurant_id = self.request.query_params.get('restaurant')
+        if restaurant_id:
+            qs = qs.filter(restaurant_id=restaurant_id)
+        return qs

@@ -13,10 +13,12 @@ class Reservation(models.Model):
     """
 
     class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pendiente'
         CONFIRMED = 'CONFIRMED', 'Confirmada'
         CANCELLED = 'CANCELLED', 'Cancelada'
 
-    ACTIVE_STATUSES = [Status.CONFIRMED]
+    # Estados que ocupan mesa (se cuentan para conflictos de disponibilidad)
+    ACTIVE_STATUSES = [Status.PENDING, Status.CONFIRMED]
 
     restaurant = models.ForeignKey(
         'restaurants.Restaurant',
@@ -70,6 +72,8 @@ class Reservation(models.Model):
         indexes = [
             models.Index(fields=['restaurant', 'reservation_datetime']),
             models.Index(fields=['status']),
+            models.Index(fields=['table', 'status', 'reservation_datetime']),
+            models.Index(fields=['user']),
         ]
 
     def __str__(self):
@@ -83,6 +87,12 @@ class Reservation(models.Model):
         return self.user is None
 
     @property
+    def start_datetime(self):
+        """Alias semántico para legibilidad en queries de solapamiento."""
+        return self.reservation_datetime
+
+    @property
     def end_datetime(self):
+        """Hora de fin calculada con la duración media del restaurante."""
         duration = self.restaurant.average_reservation_duration
         return self.reservation_datetime + timedelta(minutes=duration)

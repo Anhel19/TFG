@@ -1,51 +1,46 @@
-from rest_framework import generics, status, permissions
+from django.contrib.auth import get_user_model
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import User
 from .serializers import (
-    UserSerializer,
+    ChangePasswordSerializer,
     UserRegisterSerializer,
-    CustomTokenObtainPairSerializer,
+    UserSerializer,
 )
+
+User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
-    """POST /api/auth/register/ — crea un usuario nuevo (rol CLIENTE)."""
+    """POST /api/auth/register/ → registro público de clientes."""
     queryset = User.objects.all()
     serializer_class = UserRegisterSerializer
     permission_classes = [permissions.AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        return Response(
-            {
-                'message': 'Usuario creado correctamente.',
-                'user': UserSerializer(user).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
-
-class CustomTokenObtainPairView(TokenObtainPairView):
-    """POST /api/auth/login/ — devuelve access + refresh + datos del user."""
-    serializer_class = CustomTokenObtainPairSerializer
-
-
-class MeView(APIView):
-    """GET /api/auth/me/ — perfil del usuario autenticado."""
+class MeView(generics.RetrieveUpdateAPIView):
+    """GET/PATCH /api/auth/me/ → datos del usuario autenticado."""
+    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        return Response(UserSerializer(request.user).data)
+    def get_object(self):
+        return self.request.user
 
-    def patch(self, request):
-        serializer = UserSerializer(
-            request.user, data=request.data, partial=True
+
+class ChangePasswordView(APIView):
+    """POST /api/auth/change-password/ → cambiar la contraseña."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save()
+        return Response(
+            {'detail': 'Contraseña actualizada correctamente.'},
+            status=status.HTTP_200_OK,
+        )

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -23,6 +24,7 @@ class Restaurant(models.Model):
     # Duración media de reserva (los horarios viven en OpeningHours)
     average_reservation_duration = models.PositiveIntegerField(
         default=90,
+        validators=[MinValueValidator(15)],
         help_text='Duración media de una reserva en minutos',
     )
 
@@ -34,6 +36,10 @@ class Restaurant(models.Model):
         ordering = ['name']
         verbose_name = 'Restaurante'
         verbose_name_plural = 'Restaurantes'
+        indexes = [
+            models.Index(fields=['city']),
+            models.Index(fields=['is_active']),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.city})"
@@ -53,6 +59,7 @@ class Table(models.Model):
         help_text='Número identificador de la mesa dentro del restaurante',
     )
     capacity = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
         help_text='Número de comensales que admite la mesa',
     )
     is_active = models.BooleanField(default=True)
@@ -61,7 +68,6 @@ class Table(models.Model):
         ordering = ['restaurant', 'number']
         verbose_name = 'Mesa'
         verbose_name_plural = 'Mesas'
-        # No puede haber dos mesas con el mismo número en el mismo restaurante
         constraints = [
             models.UniqueConstraint(
                 fields=['restaurant', 'number'],
@@ -77,6 +83,7 @@ class OpeningHours(models.Model):
     """
     Horario de apertura de un restaurante para un día concreto de la semana.
     Si un día no tiene OpeningHours, se considera cerrado.
+    Permite varios tramos por día (ej: 13:00-16:00 y 20:00-23:30).
     """
 
     class Weekday(models.IntegerChoices):
@@ -101,6 +108,15 @@ class OpeningHours(models.Model):
         ordering = ['restaurant', 'day_of_week', 'opening_time']
         verbose_name = 'Horario de apertura'
         verbose_name_plural = 'Horarios de apertura'
+        indexes = [
+            models.Index(fields=['restaurant', 'day_of_week']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(opening_time__lt=models.F('closing_time')),
+                name='opening_before_closing',
+            ),
+        ]
 
     def __str__(self):
         return (
