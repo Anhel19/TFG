@@ -84,11 +84,16 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
       4. Existe alguna mesa con capacidad >= party_size y libre
     """
 
+    table_number = serializers.IntegerField(source='table.number', read_only=True)
+    restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)
+
     class Meta:
         model = Reservation
         fields = [
             'id',
             'restaurant',
+            'restaurant_name',
+            'table_number',
             'guest_name',
             'guest_email',
             'guest_phone',
@@ -96,7 +101,7 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
             'party_size',
             'notes',
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'restaurant_name', 'table_number']
 
     # ---------- Validaciones de campo ----------
     def validate_reservation_datetime(self, value):
