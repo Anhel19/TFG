@@ -11,7 +11,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo / nombre */}
         <NavLink to="/" className="flex items-center gap-2">
-          <span className="text-2xl">🍽️</span>
+          <img src="/logo.jpg" alt="True Table" className="h-10 w-10 rounded-lg" />
           <span className="text-xl font-bold text-slate-800">True Table</span>
         </NavLink>
 

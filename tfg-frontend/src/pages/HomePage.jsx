@@ -6,7 +6,8 @@ export default function HomePage() {
       <h1 className="text-5xl font-bold text-slate-800 mb-4">
         Bienvenido a True Table 🍽️
       </h1>
-      <p className="text-lg text-slate-600 mb-8">
+     
+     <p className="text-lg text-slate-600 mb-8">
         Reserva tu mesa en los mejores restaurantes en segundos.
       </p>
       <Link
