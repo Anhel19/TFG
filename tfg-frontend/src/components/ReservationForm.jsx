@@ -12,6 +12,22 @@ const initialForm = {
   notes: '',
 }
 
+// Genera franjas de media hora entre 10:00 y 22:00
+function generateTimeSlots() {
+  const slots = []
+  for (let h = 10; h <= 22; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      if (h === 22 && m > 0) break
+      const hh = String(h).padStart(2, '0')
+      const mm = String(m).padStart(2, '0')
+      slots.push(`${hh}:${mm}`)
+    }
+  }
+  return slots
+}
+
+const TIME_SLOTS = generateTimeSlots()
+
 export default function ReservationForm() {
   const [form, setForm] = useState(initialForm)
   const [restaurants, setRestaurants] = useState([])
@@ -202,14 +218,20 @@ export default function ReservationForm() {
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Hora
             </label>
-            <input
-              type="time"
+            <select
               name="time"
               value={form.time}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            >
+              <option value="">Selecciona...</option>
+              {TIME_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
