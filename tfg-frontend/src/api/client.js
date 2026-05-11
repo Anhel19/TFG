@@ -1,8 +1,13 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
+// URL base de la API:
+// - En producción: viene de la variable VITE_API_URL (configurada en Vercel)
+// - En local: usa '/api' que Vite proxea al backend de desarrollo
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -62,7 +67,7 @@ client.interceptors.response.use(
 
     try {
       // Llamada con axios "puro" para no entrar en bucle con el interceptor
-      const { data } = await axios.post('/api/auth/refresh/', {
+      const { data } = await axios.post(`${API_URL}/auth/refresh/`, {
         refresh: refreshToken,
       })
 
