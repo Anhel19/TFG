@@ -50,6 +50,17 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {isAuth && user?.role === 'OWNER' && (
+            <NavLink
+              to="/panel"
+              className={({ isActive }) =>
+                `${linkBase} ${isActive ? linkActive : linkInactive}`
+              }
+            >
+              Mi panel
+            </NavLink>
+          )}
+
           {isAuth ? (
             <>
               <span className="px-3 py-2 text-sm text-slate-600 hidden sm:inline">

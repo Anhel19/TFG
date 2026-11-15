@@ -47,22 +47,19 @@ def find_available_table(restaurant, start_dt, party_size, exclude_reservation_i
     ).order_by('capacity', 'number')
 
     for table in candidate_tables:
+        # Condición de solapamiento en una sola query:
+        # Una reserva solapa si: r.start < end_dt  AND  r.start + duration > start_dt
+        # La segunda condición equivale a: r.start > start_dt - duration
         overlapping = Reservation.objects.filter(
             table=table,
             status__in=Reservation.ACTIVE_STATUSES,
             reservation_datetime__lt=end_dt,
+            reservation_datetime__gt=start_dt - duration,
         )
         if exclude_reservation_id:
             overlapping = overlapping.exclude(pk=exclude_reservation_id)
 
-        has_overlap = False
-        for r in overlapping:
-            r_end = r.reservation_datetime + duration
-            if r_end > start_dt:
-                has_overlap = True
-                break
-
-        if not has_overlap:
+        if not overlapping.exists():
             return table
 
     return None

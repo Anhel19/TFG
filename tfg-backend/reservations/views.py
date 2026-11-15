@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -46,7 +48,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return qs
 
         # Filtro: el cliente ve sus reservas + el owner ve las de sus restaurantes
-        from django.db.models import Q
         return qs.filter(
             Q(user=user) | Q(restaurant__owner=user)
         )

@@ -14,10 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================
 # SEGURIDAD
 # ============================================================
-SECRET_KEY = config(
-    'SECRET_KEY',
-    default='django-insecure-kto%5psux_p9!0@+dcifv*qvl72a0ive55e5hu+q8oh!g0phox',
-)
+SECRET_KEY = config('SECRET_KEY')  # Obligatorio en .env — sin valor por defecto por seguridad
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 

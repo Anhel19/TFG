@@ -6,6 +6,7 @@ import ReservationPage from './pages/ReservationPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import MyReservationsPage from './pages/MyReservationsPage'
+import OwnerDashboardPage from './pages/OwnerDashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -32,6 +33,16 @@ function App() {
           element={
             <ProtectedRoute>
               <MyReservationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Panel del propietario */}
+        <Route
+          path="/panel"
+          element={
+            <ProtectedRoute>
+              <OwnerDashboardPage />
             </ProtectedRoute>
           }
         />
